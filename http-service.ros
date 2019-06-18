@@ -11,15 +11,19 @@ exec ros dynamic-space-size=4096 -Q -L sbcl -- $0 "$@"
 
 ;;; USE PACKAGES
 (setf ql:*local-project-directories* (list "~/.roswell/local-projects/"))
+(ql:quickload :clack :silent t)
 (ql:quickload :woo :silent t)
 (ql:quickload :ningle :silent t)
+(ql:quickload :jack-tools :silent t)
+(ql:quickload :log4cl :silent t)
+(ql:quickload :dexador :silent t)
 
 ;;; PACKAGE DECLARATION
 (in-package #:cl-user)
 (defpackage #:ninglewoo
   (:use #:cl
-	#:ningle
-	#:woo))
+	#:jack.tools.lists
+	#:jack.tools.misc))
 (in-package #:ninglewoo)
 
 ;;; LOAD FLAGS
@@ -32,4 +36,12 @@ exec ros dynamic-space-size=4096 -Q -L sbcl -- $0 "$@"
 (log:config :pattern "%&%<%I%;<;;>;-5p [%D{%H:%M:%S}] - %m%>%n")
 
 ;;; ENTRYPOINT
-(defun main (&rest argv))
+(defvar *app* (make-instance 'ningle:app))
+(defhandler (*app* "/json" :method :post)
+  (log:info http-content*)
+  (list (cons "foo" (agethash :test http-content*))))
+
+(defun main (&rest argv)
+  (clack:clackup *app* :server :woo :use-default-middlewares nil)
+  (dex:post "http://127.0.0.1:5000/json" :content "{\"test\":1}"))
+
